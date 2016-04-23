@@ -26,3 +26,15 @@
 *.exe
 *.out
 *.app
+*.suo
+ObstacleAvoidance/Debug/ObstacleAvoidance.ilk
+*.ipch
+ObstacleAvoidance/ObstacleAvoidance.VC.db
+*.opendb
+*.tlog
+ObstacleAvoidance/ObstacleAvoidance/Debug/ObstacleAvoidance.log
+*.idb
+*.pdb
+*.sln
+ObstacleAvoidance/ObstacleAvoidance/ObstacleAvoidance.vcxproj
+*.filters
