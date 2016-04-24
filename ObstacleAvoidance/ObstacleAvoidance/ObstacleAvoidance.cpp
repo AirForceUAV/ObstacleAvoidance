@@ -1,4 +1,4 @@
-// ObstacleAvoidance.cpp : ¶¨Òå¿ØÖÆÌ¨Ó¦ÓÃ³ÌĞòµÄÈë¿Úµã¡£
+ï»¿// ObstacleAvoidance.cpp : å®šä¹‰æ§åˆ¶å°åº”ç”¨ç¨‹åºçš„å…¥å£ç‚¹ã€‚
 //
 
 #include "stdafx.h"
@@ -15,6 +15,11 @@ using namespace std;
 struct Angle
 {
 	unsigned short m_angle;
+	enum DIRECTION
+	{
+		CLOCKWISE,
+		ANTICLOCKWISE
+	};
 	Angle(unsigned short angle = 0) :m_angle(angle)
 	{}
 	Angle(const Angle& a) : m_angle(a.m_angle)
@@ -23,6 +28,15 @@ struct Angle
 	{
 		m_angle = (unsigned short)(radian / M_PI * 180);
 	}
+	bool operator < (const Angle &a) const
+	{
+		return m_angle < a.m_angle;
+	}
+	bool operator > (const Angle &a) const
+	{
+		return m_angle > a.m_angle;
+	}
+
 	Angle &operator ++()
 	{
 		m_angle = (++m_angle) % 360;
@@ -72,7 +86,7 @@ struct Angle
 	{
 		return m_angle;
 	}
-	//²»°üÀ¨Î²¶ËendµÄ
+	//ä¸åŒ…æ‹¬å°¾ç«¯endçš„
 	bool IsBelong(const Angle& begin, const Angle &end) const
 	{
 		return (*this + begin).m_angle < end.m_angle;
@@ -85,15 +99,23 @@ struct Point
 	unsigned short quality;
 	Angle angle;
 	unsigned short distance;
+	bool Unavailable() const
+	{
+		return !quality && !angle && !distance;
+	}
+
 };
 
-//·ÉĞĞ¶ÔÏó
+//é£è¡Œå¯¹è±¡
 struct Object
 {
-	//·É»ú³ß´ç
+	//é£æœºå°ºå¯¸
 	unsigned short m_size;
-	unsigned short m_targetAngle;
-	Object(short size) :m_size(size), m_targetAngle(0)
+	//ç›®æ ‡æ–¹å‘
+	Angle m_targetAngle;
+	//å½“å‰æ–¹å‘
+	Angle m_currentAngle;
+	Object(short size) :m_size(size), m_targetAngle(0), m_currentAngle(0)
 	{}
 	void SetTarget(unsigned short angle)
 	{
@@ -101,27 +123,27 @@ struct Object
 	}
 };
 
-//Ì½²â²ßÂÔ
-//·ÉĞĞ·½ÏòÕÏ°­µã¼ì²â
+//æ¢æµ‹ç­–ç•¥
+//é£è¡Œæ–¹å‘éšœç¢ç‚¹æ£€æµ‹
 struct DetectStrategy
 {
-	//¼ÇÂ¼°²È«¾àÀë·¶Î§(´Ó270-360¶ÁµÄ×îĞ¡°²È«¾àÀë)
+	//è®°å½•å®‰å…¨è·ç¦»èŒƒå›´(ä»270-360è¯»çš„æœ€å°å®‰å…¨è·ç¦»)
 	unsigned short m_safeScope[91];
-	//¶ÔÏó·ÉĞĞÆ÷
+	//å¯¹è±¡é£è¡Œå™¨
 	const Object& m_obj;
-	//°²È«¾àÀë
+	//å®‰å…¨è·ç¦»
 	unsigned short m_safeDistance;
-	DetectStrategy(const Object& obj,unsigned short safeDistance = 0) :m_obj(obj)
+	DetectStrategy(const Object& obj, unsigned short safeDistance = 0) :m_obj(obj)
 	{
 		Modify(safeDistance);
 	}
 	void Modify(short safeDistance)
 	{
 		m_safeDistance = m_safeDistance;
-		//¼ÆËãµ±Ç°Î»ÖÃµ½×îÔ¶°²È«¾àÀëµÄÇĞÏßÓëÔ²ĞÄÁ¬ÏßµÄ¼Ğ½Ç
+		//è®¡ç®—å½“å‰ä½ç½®åˆ°æœ€è¿œå®‰å…¨è·ç¦»çš„åˆ‡çº¿ä¸åœ†å¿ƒè¿çº¿çš„å¤¹è§’
 		short angle = (short)((atan((double)m_obj.m_size / safeDistance) / M_PI) * 180.0);
 
-		//¼ÆËãÔ²ĞÄÁ¬Ïßµ½ÇĞÏßµÄ¼Ğ½ÇµÄ°²È«¾àÀë
+		//è®¡ç®—åœ†å¿ƒè¿çº¿åˆ°åˆ‡çº¿çš„å¤¹è§’çš„å®‰å…¨è·ç¦»
 		for (short i = 0; i < angle; ++i)
 		{
 			m_safeScope[i] = (short)ceil(
@@ -129,28 +151,29 @@ struct DetectStrategy
 				sqrt(m_obj.m_size * m_obj.m_size - pow(safeDistance * sin(i / 180.0 * M_PI), 2)));
 		}
 
-		//¼ÆËãÇĞÏßµ½90¡ãÖ±¾¶µÄ¼Ğ½ÇµÄ°²È«¾àÀë
+		//è®¡ç®—åˆ‡çº¿åˆ°90Â°ç›´å¾„çš„å¤¹è§’çš„å®‰å…¨è·ç¦»
 		for (short i = angle; i <= 90; ++i)
 		{
 			m_safeScope[i] = (short)ceil(
 				m_obj.m_size / cos((90 - i) / 180.0 * M_PI));
 		}
 	}
-	bool Detect(const Point& point)
+
+	bool Detect(const Point& point) const
 	{
 		return Detect(point.angle - m_obj.m_targetAngle, point.distance);
 	}
-	//target-·ÉĞĞ·½Ïò
-	//point-¼ì²âµã
-	//·µ»ØÖµ-true£ºÓĞÕÏ°­Îï£»false£ºÎŞÕÏ°­Îï
-	bool Detect(const Angle &target, const Point& point)
+	//target-é£è¡Œæ–¹å‘
+	//point-æ£€æµ‹ç‚¹
+	//è¿”å›å€¼-trueï¼šæœ‰éšœç¢ç‰©ï¼›falseï¼šæ— éšœç¢ç‰©
+	bool Detect(const Angle &target, const Point& point) const
 	{
-		//ÔÚ¼ì²â·¶Î§Ö®ÄÚ
+		//åœ¨æ£€æµ‹èŒƒå›´ä¹‹å†…
 		return Detect(point.angle - target, point.distance);
 	}
-	bool Detect(const Angle &angle, short distance)
+	bool Detect(const Angle &angle, short distance) const
 	{
-		//ÔÚ¼ì²â·¶Î§Ö®ÄÚ
+		//åœ¨æ£€æµ‹èŒƒå›´ä¹‹å†…
 		if (angle.IsBelong((unsigned short)90, (unsigned short)0))
 		{
 			return false;
@@ -164,39 +187,98 @@ struct DetectStrategy
 		}
 	}
 
-	//¼à²âµãÆ½ÒÆ
-	Angle Clockwise(const Angle &target, const Point& p)
+	//ç›‘æµ‹ç‚¹å¹³ç§»
+	//è¯´æ˜ï¼šæ ¹æ®ç›‘æµ‹ç‚¹
+	Angle Move(const Angle &target, const Point& p) const
 	{
-		Angle a = acos((double)m_obj.m_size/p.distance);
-		return Angle((unsigned short)90) - a + p.angle - target;
+		Angle a = asin((double)m_obj.m_size / p.distance);
+		if ((p.angle - target).IsBelong((unsigned short)0, (unsigned short)180))
+		{
+			return a + p.angle;
+		}
+		else
+		{
+			return a - (p.angle - target);
+		}
 	}
+	//æ‰«æ
+	const Point& Scan(const Angle& target, const vector<Point> &map, Angle::DIRECTION d) const
+	{
+		for (unsigned short i = 90; i >= 0; --i)
+		{
+			Angle tmp = (d == Angle::ANTICLOCKWISE ? target + i : target - i);
+			if (Detect(target, map[tmp]))
+			{
+				return map[tmp];
+			}
+		}
+		return Point();
+	}
+
 };
 
 struct DecisionStrategy
 {
-	//Ì½²â²ßÂÔ
+	//æ¢æµ‹ç­–ç•¥
 	const DetectStrategy& m_stt;
 
 };
 
-//Í¹¶à±ßĞÎ±ÜÕÏ²ßÂÔ
-struct CovexPolygonStrategy
+//æ­£å¸¸é£è¡Œç­–ç•¥
+struct NormalStrategy
 {
-	const Point Strategy(const vector<Point> &map,const Object &obj)
+	const Point Strategy(const vector<Point> &map, const DetectStrategy &stt)
 	{
+		if (map.size() != 360)
+		{
+			return Point();
+		}
+		Point destination{ 0,stt.m_obj.m_targetAngle,stt.m_safeDistance };
 
+		Point cw = stt.Scan(stt.m_obj.m_targetAngle, map, Angle::CLOCKWISE);
+		Point acw = stt.Scan(stt.m_obj.m_targetAngle, map, Angle::ANTICLOCKWISE);
+		stt.Move(stt.m_obj.m_currentAngle, cw);
+		stt.Move(stt.m_obj.m_currentAngle, acw);
+		//ç›®æ ‡æ–¹å‘å¯ä»¥é£è¡Œ
+		if (cw.Unavailable() && acw.Unavailable())
+		{
+		}
+
+		return destination;
 	}
 };
 
-//°¼¶à±ßĞÎ±ÜÕÏ²ßÂÔ
+//å‡¸å¤šè¾¹å½¢é¿éšœç­–ç•¥
+struct CovexPolygonStrategy
+{
+	const Point Strategy(const vector<Point> &map, const DetectStrategy &stt)
+	{
+		if (map.size() != 360)
+		{
+			return Point();
+		}
+		Point destination{ 0,(unsigned short)stt.m_obj.m_targetAngle,0 };
+		Angle planAngle = stt.m_obj.m_targetAngle;
+
+		//åœ¨å½“ç›®æ ‡é£è¡Œæ–¹å‘å’Œå½“å‰é£è¡Œæ–¹å‘ä¹‹é—´å¯»æ‰¾æœ€ä¼˜æ–¹å‘
+		while (planAngle.IsBelong(stt.m_obj.m_targetAngle, stt.m_obj.m_currentAngle + (unsigned short)1))
+		{
+
+		}
+
+		return destination;
+	}
+};
+
+//å‡¹å¤šè¾¹å½¢é¿éšœç­–ç•¥
 struct ConcavePolygonStrategy
 {
 
 };
 
 
-//Á½µãÖ®¼äµÄ¾àÀë
-unsigned short Distance(const Point& p1,const Point& p2)
+//ä¸¤ç‚¹ä¹‹é—´çš„è·ç¦»
+unsigned short Distance(const Point& p1, const Point& p2)
 {
 	unsigned short angle = p1.angle - p2.angle;
 	double cosa = cos(angle / 180 * M_PI);
@@ -206,13 +288,13 @@ unsigned short Distance(const Point& p1,const Point& p2)
 
 
 
-const Point Decision(const DetectStrategy &stt,const Object &obj,const vector<Point> &map)
+const Point Decision(const DetectStrategy &stt, const Object &obj, const vector<Point> &map)
 {
 	if (map.size() != 360)
 	{
 		return Point();
 	}
-	Point destination{0,(unsigned short)0,stt.m_safeDistance};
+	Point destination{ 0,(unsigned short)0,stt.m_safeDistance };
 
 
 
@@ -226,9 +308,10 @@ int main()
 {
 	Object obj(100);
 	DetectStrategy stt(obj, 100);
-	Point p1{ 0,(unsigned short)45, 200 }, p2{ 0, (unsigned short)270, 0 };
+	Point p1{ 0,(unsigned short)45, 200 }, p2{ 0, (unsigned short)315, 200 };
 	stt.Detect(p1);
-	Angle d = stt.Clockwise((unsigned short)0,p1);
+	Angle d = stt.Move((unsigned short)0, p1);
+	d = stt.Move((unsigned short)0, p2);
 	return 0;
 }
 
