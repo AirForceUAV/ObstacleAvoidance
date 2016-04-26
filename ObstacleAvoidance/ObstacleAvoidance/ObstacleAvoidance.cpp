@@ -61,7 +61,7 @@ struct Angle
 		return tmp;
 	}
 	Angle operator + (unsigned short a) const
-	{
+	{//顺时针转向
 		Angle tmp(*this);
 		tmp.m_angle = (tmp.m_angle + a) % 360;
 		return tmp;
@@ -71,7 +71,7 @@ struct Angle
 		return Angle(*this) + a.m_angle;
 	}
 	Angle operator - (unsigned short a) const
-	{//两角度数差的锐角绝对值
+	{//逆时针转动
 		Angle tmp(*this);
 		if (a != 0)
 		{
@@ -82,6 +82,16 @@ struct Angle
 	Angle operator - (const Angle& a) const
 	{
 		return Angle(*this) - a.m_angle;
+	}
+	//两角差值（小于180的差值）
+	Angle absDiff(const Angle &a) const
+	{
+		unsigned short tmp = m_angle > a.m_angle ? m_angle - a.m_angle : a.m_angle - m_angle;
+		if (tmp > 180)
+		{
+			tmp = 360 - tmp;
+		}
+		return Angle(tmp);
 	}
 	operator unsigned short() const
 	{
@@ -97,7 +107,7 @@ struct Angle
 };
 
 
-struct Point
+struct MyPoint
 {
 	unsigned short quality;
 	Angle angle;
@@ -162,23 +172,23 @@ struct DetectStrategy
 		}
 	}
 
-	bool Detect(const Point& point) const
+	bool Detect(const MyPoint& point) const
 	{
 		return Detect(point.angle - m_obj.m_targetAngle, point.distance);
 	}
 	//target-飞行方向
 	//point-检测点
 	//返回值-true：有障碍物；false：无障碍物
-	bool Detect(const Angle &target, const Point& point) const
+	bool Detect(const Angle &target, const MyPoint& point) const
 	{
 		//在检测范围之内
-		return Detect(point.angle - target, point.distance);
+		return Detect(point.angle.absDiff(target), point.distance);
 	}
-	bool Detect(const Angle &angle, short distance) const
+	bool Detect(const Angle &angle, unsigned short distance) const
 	{
-		//在检测范围之内
+
 		if (angle.IsBelong((unsigned short)90, (unsigned short)0))
-		{
+		{//不在检测范围之内
 			return false;
 		}
 		else
@@ -192,7 +202,7 @@ struct DetectStrategy
 
 	//监测点平移
 	//说明：根据监测点
-	pair<Angle, Angle> Move(const Point& p) const
+	pair<Angle, Angle> Move(const MyPoint& p) const
 	{
 		if (p.distance < m_obj.m_size)
 		{
@@ -202,9 +212,9 @@ struct DetectStrategy
 		return make_pair(p.angle - a, p.angle + a);
 	}
 	//扫描
-	pair<const Point *, const Point *> Scan(const Angle& target, const vector<Point> &map) const
+	pair<const MyPoint *, const MyPoint *> Scan(const Angle& target, const vector<MyPoint> &map) const
 	{
-		pair<const Point *, const Point *> obstacle;
+		pair<const MyPoint *, const MyPoint *> obstacle;
 		for (unsigned short i = 90; i != 0xffff; --i)
 		{
 			Angle tmp = target - i;
@@ -225,38 +235,38 @@ struct DetectStrategy
 		}
 		return obstacle;
 	}
-	
+
 	//顺时针寻找可行方案
 	//obstacle障碍点
-	const Angle Clockwise(const Point& obstacle,const vector<Point> &map) const
+	const Angle Clockwise(const MyPoint& obstacle, const vector<MyPoint> &map) const
 	{
-		const Point* p = &obstacle;
-		for(unsigned short i = 0;i <= 360;)
+		const MyPoint* p = &obstacle;
+		for (unsigned short i = 0; i <= 360;)
 		{
-			pair<Angle, Angle> candidate = Move(obstacle);
-			pair<const Point*, const Point*> obstacles = Scan(candidate.first, map);
+			pair<Angle, Angle> candidate = Move(*p);
+			pair<const MyPoint*, const MyPoint*> obstacles = Scan(candidate.second, map);
 			if (obstacles.first == NULL && obstacles.second == NULL)
 			{
-				return candidate.first;
+				return candidate.second;
 			}
-			i += (obstacles.first ? obstacles.first : obstacles.second)->angle - p->angle;
+			i += (obstacles.first ? obstacles.first : obstacles.second)->angle.absDiff(p->angle);
 			p = obstacles.first ? obstacles.first : obstacles.second;
 		}
 		//未找到解决方案
 		return Angle((unsigned short)0xffff);
 	}
-	const Angle Anticlockwise(const Point& obstacle, const vector<Point> &map) const
+	const Angle Anticlockwise(const MyPoint& obstacle, const vector<MyPoint> &map) const
 	{
-		const Point* p = &obstacle;
+		const MyPoint* p = &obstacle;
 		for (unsigned short i = 0; i <= 360;)
 		{
-			pair<Angle, Angle> candidate = Move(obstacle);
-			pair<const Point*, const Point*> obstacles = Scan(candidate.second, map);
+			pair<Angle, Angle> candidate = Move(*p);
+			pair<const MyPoint*, const MyPoint*> obstacles = Scan(candidate.first, map);
 			if (obstacles.first == NULL && obstacles.second == NULL)
 			{
-				return candidate.second;
+				return candidate.first;
 			}
-			i += (obstacles.second ? obstacles.second : obstacles.first)->angle - p->angle;
+			i += (obstacles.second ? obstacles.second : obstacles.first)->angle.absDiff(p->angle);
 			p = obstacles.second ? obstacles.second : obstacles.first;
 		}
 		//未找到解决方案
@@ -270,27 +280,27 @@ struct DetectStrategy
 //当前飞行策略
 struct FlyStrategy
 {
-	virtual const Point Strategy(const vector<Point> &map, const DetectStrategy &stt, FlyStrategy *currentStrategy) const = 0;
+	virtual const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const = 0;
 };
 
 //正常飞行策略
 struct NormalStrategy :public FlyStrategy
 {
-	const Point Strategy(const vector<Point> &map, const DetectStrategy &stt, FlyStrategy *currentStrategy) const;
+	virtual const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const;
 };
 
 //凸多边形避障策略
 struct CovexPolygonStrategy : public FlyStrategy
 {
-	const Point Strategy(const vector<Point> &map, const DetectStrategy &stt, FlyStrategy *currentStrategy) const;
+	virtual const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const;
 };
 
-const Point NormalStrategy::Strategy(const vector<Point> &map, const DetectStrategy &stt, FlyStrategy *currentStrategy) const
+const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const
 {
-	Point destination{ 0,stt.m_obj.m_targetAngle,stt.m_safeDistance };
+	MyPoint destination{ 0,stt.m_obj.m_targetAngle,stt.m_safeDistance };
 
 
-	pair<const Point*, const Point *> obstacle = stt.Scan(stt.m_obj.m_targetAngle, map);
+	pair<const MyPoint*, const MyPoint *> obstacle = stt.Scan(stt.m_obj.m_targetAngle, map);
 	//当前飞行方向无障碍
 	if (obstacle.first == NULL && obstacle.second == NULL)
 	{
@@ -309,30 +319,35 @@ const Point NormalStrategy::Strategy(const vector<Point> &map, const DetectStrat
 	}
 
 	//选择和目标方向夹角小的角度
-	destination.angle = cw - stt.m_obj.m_targetAngle < acw - stt.m_obj.m_targetAngle ? cw : acw;
-	
-	if (destination.angle - stt.m_obj.m_targetAngle)
+	destination.angle = cw.absDiff(stt.m_obj.m_targetAngle) < acw.absDiff(stt.m_obj.m_targetAngle) ? cw : acw;
+
+	if (destination.angle.absDiff(stt.m_obj.m_targetAngle) <= 90)
 	{//与目标方向夹角为锐角，则切换到凸多边形壁障模式
-		delete currentStrategy;
-		currentStrategy = new CovexPolygonStrategy();
+		delete *currentStrategy;
+		*currentStrategy = new CovexPolygonStrategy();
+	}
+	else
+	{
+		cout << "CovexPloygon" << endl;
+		throw exception("CovexPloygon");
 	}
 	return destination;
 }
 
-const Point CovexPolygonStrategy::Strategy(const vector<Point> &map, const DetectStrategy &stt, FlyStrategy *currentStrategy) const
+const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const
 {
-	Point destination{ 0,(unsigned short)0,0 };
+	MyPoint destination{ 0,(unsigned short)0,0 };
 	Angle planAngle = stt.m_obj.m_targetAngle;
 
-	pair<const Point*, const Point *> obstacle = stt.Scan(stt.m_obj.m_targetAngle, map);
+	pair<const MyPoint*, const MyPoint *> obstacle = stt.Scan(stt.m_obj.m_targetAngle, map);
 
 	if (obstacle.first == NULL && obstacle.second == NULL)
 	{
-			delete currentStrategy;
-			currentStrategy = new NormalStrategy();
-			destination.angle = stt.m_obj.m_targetAngle;
-			destination.distance = stt.m_safeDistance;
-			return destination;
+		delete *currentStrategy;
+		*currentStrategy = new NormalStrategy();
+		destination.angle = stt.m_obj.m_targetAngle;
+		destination.distance = stt.m_safeDistance;
+		return destination;
 	}
 	//计划方向
 
@@ -370,14 +385,14 @@ struct DecisionStrategy
 	{
 		delete m_currentStrategy;
 	}
-	const Point Strategy(const vector<Point> &map, const DetectStrategy &stt) const
+	const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt)
 	{
-		return m_currentStrategy->Strategy(map, stt, m_currentStrategy);
+		return m_currentStrategy->Strategy(map, stt, &m_currentStrategy);
 	}
 };
 
 //两点之间的距离
-unsigned short Distance(const Point& p1, const Point& p2)
+unsigned short Distance(const MyPoint& p1, const MyPoint& p2)
 {
 	unsigned short angle = p1.angle - p2.angle;
 	double cosa = cos(angle / 180 * M_PI);
@@ -387,13 +402,13 @@ unsigned short Distance(const Point& p1, const Point& p2)
 
 
 
-const Point Decision(const DetectStrategy &stt, const Object &obj, const vector<Point> &map)
+const MyPoint Decision(const DetectStrategy &stt, const Object &obj, const vector<MyPoint> &map)
 {
 	if (map.size() != 360)
 	{
-		return Point();
+		return MyPoint();
 	}
-	Point destination{ 0,(unsigned short)0,stt.m_safeDistance };
+	MyPoint destination{ 0,(unsigned short)0,stt.m_safeDistance };
 
 
 
@@ -402,41 +417,41 @@ const Point Decision(const DetectStrategy &stt, const Object &obj, const vector<
 
 
 
-
 int main()
 {
 	Object obj(500);
 	DetectStrategy stt(obj, 500);
 	
-	Point p1{ 0,(unsigned short)45, 3000 }, p2{ 0, (unsigned short)315, 200 };
+	MyPoint p1{ 0,(unsigned short)274, 1111 }, p2{ 0, (unsigned short)315, 200 };
+	stt.Detect(p1);
 	//stt.Detect(p1);
 	//auto d1 = stt.Move(p1);
 	//auto d2 = stt.Move(p2);
-	DecisionStrategy ds;
-	vector<Point> map(360);
-	for (unsigned short i = 00; i < 360; ++i)
-	{
-		Point p1{0,i,3000};
-		map[i] = p1;
-	}
-	map[1].distance = 700;
-	try
-	{
-		map[1].distance = 700;
-		Point p = ds.Strategy(map, stt);
-		cout << p.angle << endl;
+	//DecisionStrategy ds;
+	//vector<Point> map(360);
+	//for (unsigned short i = 00; i < 360; ++i)
+	//{
+	//	Point p1{0,i,3000};
+	//	map[i] = p1;
+	//}
+	//map[1].distance = 700;
+	//try
+	//{
+	//	map[1].distance = 700;
+	//	Point p = ds.Strategy(map, stt);
+	//	cout << p.angle << endl;
 
-		obj.m_currentAngle = p.angle;
-	
-		map[1].distance = 7000;
-		p = ds.Strategy(map, stt);
-		cout << p.angle << endl;
-	}
-	catch (exception &e)
-	{
-		cout << e.what() << endl;
-	}
-	
+	//	obj.m_currentAngle = p.angle;
+	//
+	//	map[1].distance = 7000;
+	//	p = ds.Strategy(map, stt);
+	//	cout << p.angle << endl;
+	//}
+	//catch (exception &e)
+	//{
+	//	cout << e.what() << endl;
+	//}
+	//
 return		0;
 }
 
