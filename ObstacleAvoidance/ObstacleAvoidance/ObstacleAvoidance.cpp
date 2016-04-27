@@ -60,6 +60,7 @@ struct Angle
 		(*this)--;
 		return tmp;
 	}
+	//顺时针旋转a°
 	Angle operator + (unsigned short a) const
 	{//顺时针转向
 		Angle tmp(*this);
@@ -70,6 +71,7 @@ struct Angle
 	{
 		return Angle(*this) + a.m_angle;
 	}
+	//逆时针旋转a°
 	Angle operator - (unsigned short a) const
 	{//逆时针转动
 		Angle tmp(*this);
@@ -140,7 +142,7 @@ struct Object
 //飞行方向障碍点检测
 struct DetectStrategy
 {
-	//记录安全距离范围(从270-360读的最小安全距离)
+	//记录安全距离范围(从0-90读的最小安全距离)
 	unsigned short m_safeScope[91];
 	//对象飞行器
 	const Object& m_obj;
@@ -184,6 +186,7 @@ struct DetectStrategy
 		//在检测范围之内
 		return Detect(point.angle.absDiff(target), point.distance);
 	}
+	//angle传入角度为转换到0-90°之后的角度
 	bool Detect(const Angle &angle, unsigned short distance) const
 	{
 
@@ -200,74 +203,99 @@ struct DetectStrategy
 		}
 	}
 
-	//监测点平移
-	//说明：根据监测点
-	pair<Angle, Angle> Move(const MyPoint& p) const
+
+	//顺时针移动
+	Angle ClockwiseMove(const MyPoint& p) const
 	{
 		if (p.distance < m_obj.m_size)
 		{
 			throw exception("crash\n");
 		}
 		Angle a = asin((double)m_obj.m_size / p.distance);
-		return make_pair(p.angle - a, p.angle + a);
+		//左安全边界横穿障碍点
+		return p.angle + a;
 	}
-	//扫描
-	pair<const MyPoint *, const MyPoint *> Scan(const Angle& target, const vector<MyPoint> &map) const
+	Angle AnticlockwiseMove(const MyPoint& p) const
 	{
-		pair<const MyPoint *, const MyPoint *> obstacle;
-		for (unsigned short i = 90; i != 0xffff; --i)
+		if (p.distance < m_obj.m_size)
 		{
-			Angle tmp = target - i;
-			if (Detect(target, map[tmp]))
-			{
-				obstacle.first = &map[tmp];
-				break;
-			}
+			throw exception("crash\n");
 		}
-		for (unsigned short i = 90; i != 0xffff; --i)
-		{
-			Angle tmp = target + i;
-			if (Detect(target, map[tmp]))
-			{
-				obstacle.second = &map[tmp];
-				break;
-			}
-		}
-		return obstacle;
+		Angle a = asin((double)m_obj.m_size / p.distance);
+		//右安全边界横穿障碍点
+		return p.angle - a;
 	}
 
-	//顺时针寻找可行方案
-	//obstacle障碍点
-	const Angle Clockwise(const MyPoint& obstacle, const vector<MyPoint> &map) const
+
+	//顺时针扫描到target
+	const MyPoint* ClockwiseScan(const Angle& target, const vector<MyPoint> &map) const
 	{
-		const MyPoint* p = &obstacle;
-		for (unsigned short i = 0; i <= 360;)
+		for (unsigned short i = 90; i != 0xffff; --i)
 		{
-			pair<Angle, Angle> candidate = Move(*p);
-			pair<const MyPoint*, const MyPoint*> obstacles = Scan(candidate.second, map);
-			if (obstacles.first == NULL && obstacles.second == NULL)
+			if (Detect(target, map[target - i]))
 			{
-				return candidate.second;
+				return &map[target - i];
 			}
-			i += (obstacles.first ? obstacles.first : obstacles.second)->angle.absDiff(p->angle);
-			p = obstacles.first ? obstacles.first : obstacles.second;
+		}
+		return NULL;
+	}
+	//逆时针扫描到target
+	const MyPoint* AnticlockwiseScan(const Angle& target, const vector<MyPoint> &map) const
+	{
+		for (unsigned short i = 90; i != 0xffff; --i)
+		{
+			if (Detect(target, map[target + i]))
+			{
+				return &map[target + i];
+			}
+		}
+		return NULL;
+	}
+
+	//从obstacle障碍点开始
+	//顺时针寻找可行方案
+	const Angle ClockwiseSearch(const MyPoint* obstacle, const vector<MyPoint> &map) const
+	{
+		if (obstacle)
+		{
+			Angle lastCandidate(obstacle->angle);
+			for (unsigned short i = 0; i <= 360;)
+			{
+				Angle candidate = ClockwiseMove(*obstacle);
+
+				i += lastCandidate.absDiff(candidate);
+				lastCandidate = candidate;
+
+				obstacle = AnticlockwiseScan(candidate, map);
+				if (!obstacle)
+				{
+					return candidate;
+				}
+			}
 		}
 		//未找到解决方案
 		return Angle((unsigned short)0xffff);
 	}
-	const Angle Anticlockwise(const MyPoint& obstacle, const vector<MyPoint> &map) const
+	//从obstacle障碍点开始
+	//逆时针寻找可行方案
+	const Angle AnticlockwiseSearch(const MyPoint* obstacle, const vector<MyPoint> &map) const
 	{
-		const MyPoint* p = &obstacle;
-		for (unsigned short i = 0; i <= 360;)
+		if (obstacle)
 		{
-			pair<Angle, Angle> candidate = Move(*p);
-			pair<const MyPoint*, const MyPoint*> obstacles = Scan(candidate.first, map);
-			if (obstacles.first == NULL && obstacles.second == NULL)
+			Angle lastCandidate(obstacle->angle);
+			for (unsigned short i = 0; i <= 360;)
 			{
-				return candidate.first;
+				Angle candidate = AnticlockwiseMove(*obstacle);
+
+				i += lastCandidate.absDiff(candidate);
+				lastCandidate = candidate;
+
+				obstacle = ClockwiseScan(candidate, map);
+				if (!obstacle)
+				{
+					return candidate;
+				}
 			}
-			i += (obstacles.second ? obstacles.second : obstacles.first)->angle.absDiff(p->angle);
-			p = obstacles.second ? obstacles.second : obstacles.first;
 		}
 		//未找到解决方案
 		return Angle((unsigned short)0xffff);
@@ -299,29 +327,27 @@ const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectS
 {
 	MyPoint destination{ 0,stt.m_obj.m_targetAngle,stt.m_safeDistance };
 
-
-	pair<const MyPoint*, const MyPoint *> obstacle = stt.Scan(stt.m_obj.m_targetAngle, map);
+	//偏左侧障碍
+	const MyPoint* leftObstacle = stt.ClockwiseScan(stt.m_obj.m_targetAngle, map);
+	//偏右侧障碍物
+	const MyPoint* rightObstacle = stt.AnticlockwiseScan(stt.m_obj.m_targetAngle, map);
 	//当前飞行方向无障碍
-	if (obstacle.first == NULL && obstacle.second == NULL)
+	if (leftObstacle == NULL && rightObstacle == NULL)
 	{
 		return destination;
 	}
-	//second表示右边
-	//first表示左边
+
+	//cw为顺时针寻找出路
+	//acw为逆时针寻找出路
 	Angle cw((unsigned short)0xffff), acw((unsigned short)0xffff);
-	if (obstacle.first)
-	{
-		cw = stt.Clockwise(*obstacle.first, map);
-	}
-	if (obstacle.second)
-	{
-		acw = stt.Anticlockwise(*obstacle.second, map);
-	}
+	cw = stt.ClockwiseSearch(rightObstacle, map);
+	acw = stt.AnticlockwiseSearch(leftObstacle, map);
+
 
 	//选择和目标方向夹角小的角度
 	destination.angle = cw.absDiff(stt.m_obj.m_targetAngle) < acw.absDiff(stt.m_obj.m_targetAngle) ? cw : acw;
 
-	if (destination.angle.absDiff(stt.m_obj.m_targetAngle) <= 90)
+	if (destination.angle.absDiff(stt.m_obj.m_targetAngle) <= 360)
 	{//与目标方向夹角为锐角，则切换到凸多边形壁障模式
 		delete *currentStrategy;
 		*currentStrategy = new CovexPolygonStrategy();
@@ -339,9 +365,13 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 	MyPoint destination{ 0,(unsigned short)0,0 };
 	Angle planAngle = stt.m_obj.m_targetAngle;
 
-	pair<const MyPoint*, const MyPoint *> obstacle = stt.Scan(stt.m_obj.m_targetAngle, map);
+	//偏左侧障碍
+	const MyPoint* leftObstacle = stt.ClockwiseScan(stt.m_obj.m_targetAngle, map);
+	//偏右侧障碍物
+	const MyPoint* rightObstacle = stt.AnticlockwiseScan(stt.m_obj.m_targetAngle, map);
 
-	if (obstacle.first == NULL && obstacle.second == NULL)
+	//当前飞行方向无障碍
+	if (leftObstacle == NULL && rightObstacle == NULL)
 	{
 		delete *currentStrategy;
 		*currentStrategy = new NormalStrategy();
@@ -349,17 +379,22 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 		destination.distance = stt.m_safeDistance;
 		return destination;
 	}
-	//计划方向
 
-	Angle plan;
+	//计划方向
+	Angle plan((unsigned short)0xffff);
 	//在当目标飞行方向和当前飞行方向之间寻找最优方向
 	if (stt.m_obj.m_targetAngle + (unsigned short)90 >= stt.m_obj.m_currentAngle)
-	{
-		plan = stt.Clockwise(obstacle.first ? *obstacle.first : *obstacle.second, map);
+	{//顺时针方向寻找出路
+		plan = stt.ClockwiseSearch(rightObstacle ? rightObstacle : leftObstacle, map);
 	}
 	else if (stt.m_obj.m_currentAngle + (unsigned short)90 >= stt.m_obj.m_targetAngle)
+	{//逆时针方向寻找出路
+		plan = stt.AnticlockwiseSearch(leftObstacle ? leftObstacle : rightObstacle, map);
+	}
+
+	if (plan > Angle((unsigned short)360))
 	{
-		plan = stt.Anticlockwise(obstacle.second ? *obstacle.second : *obstacle.first, map);
+		throw exception("no way out");
 	}
 
 	destination.angle = plan;
@@ -367,12 +402,6 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 
 	return destination;
 }
-
-//凹多边形避障策略
-struct ConcavePolygonStrategy
-{
-
-};
 
 struct DecisionStrategy
 {
@@ -390,6 +419,7 @@ struct DecisionStrategy
 		return m_currentStrategy->Strategy(map, stt, &m_currentStrategy);
 	}
 };
+
 
 //两点之间的距离
 unsigned short Distance(const MyPoint& p1, const MyPoint& p2)
@@ -424,8 +454,8 @@ int main()
 	
 	MyPoint p1{ 0,(unsigned short)274, 1111 }, p2{ 0, (unsigned short)315, 200 };
 	stt.Detect(p1);
-	//stt.Detect(p1);
-	//auto d1 = stt.Move(p1);
+	stt.Detect(p1);
+	auto d1 = stt.ClockwiseMove(p1);
 	//auto d2 = stt.Move(p2);
 	//DecisionStrategy ds;
 	//vector<Point> map(360);
