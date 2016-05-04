@@ -1,8 +1,9 @@
 ﻿// ObstacleAvoidance.cpp : 定义控制台应用程序的入口点。
 //
-
+#pragma once
 #include "stdafx.h"
-#include <stdio.h>
+
+
 #include <math.h>
 #include <utility>
 #include <algorithm>
@@ -12,6 +13,7 @@
 using namespace std;
 
 #define M_PI       3.14159265358979323846   // pi
+
 
 struct Angle
 {
