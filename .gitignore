@@ -1,0 +1,40 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.suo
+ObstacleAvoidance/Debug/ObstacleAvoidance.ilk
+*.ipch
+ObstacleAvoidance/ObstacleAvoidance.VC.db
+*.opendb
+*.tlog
+ObstacleAvoidance/ObstacleAvoidance/Debug/ObstacleAvoidance.log
+*.idb
+*.pdb
+*.sln
+ObstacleAvoidance/ObstacleAvoidance/ObstacleAvoidance.vcxproj
+*.filters
