@@ -2,7 +2,7 @@
 //
 #pragma once
 
-
+#include <stdexcept>
 #include <math.h>
 #include <utility>
 #include <algorithm>
