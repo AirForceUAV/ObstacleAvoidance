@@ -31,8 +31,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <unistd.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <errno.h>
 #include "rplidar.h" //RPLIDAR standard sdk, all-in-one header
+#include "ObstacleAvoidance.hh"
 
 #ifndef _countof
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
@@ -65,10 +70,102 @@ bool checkRPLIDARHealth(RPlidarDriver * drv)
     }
 }
 
+//request pipe name.request the direction
+#define REQUESTPIPE "./Request"
+//reply pipe name. 
+#define REPLYPIPE "./Reply"
+
+unsigned int GetFifo()
+{
+	unsigned int pipeFd = 0;
+	if(access(REQUESTPIPE,F_OK | R_OK) == -1)
+	{
+		if(mkfifo(REQUESTPIPE,0777))
+		{
+			fprintf(stderr,"Could not create fifo %s \n",REQUESTPIPE);
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if(access(REPLYPIPE,F_OK | R_OK) == -1)
+	{
+		if(mkfifo(REPLYPIPE,0777))
+		{
+			fprintf(stderr,"Could not create fifo %s \n",REPLYPIPE);
+			exit(EXIT_FAILURE);
+		}
+	}
+	
+	//high-order restore the request pipe file descriptor
+RequestFdInit:
+	int fd = open(REQUESTPIPE,O_RDONLY | O_NONBLOCK);
+	if(fd == -1)
+	{
+		goto RequestFdInit;
+		exit(EXIT_FAILURE);
+	}
+	pipeFd |= fd;
+	pipeFd <<= (sizeof(unsigned int) * 8 / 2);
+	
+	//low-order restore the reply pipe file descriptor.
+ReplyInit:
+	fd = open(REPLYPIPE, O_WRONLY | O_NONBLOCK);
+	if(fd == -1)
+	{
+		goto ReplyInit;
+		exit(EXIT_FAILURE);
+	}
+	pipeFd |= fd;
+	return pipeFd;		
+}
+
+
+//receive the message
+int Request(size_t fd,Object &obj)
+{
+	Angle buffer[2];
+		int ret = read(fd,buffer,sizeof(Angle) * 2);
+		if(ret >= (int)sizeof(Angle )* 2)
+		{
+			obj.m_targetAngle = buffer[0];
+			obj.m_currentAngle = buffer[1];
+			printf("%d	%d\n",obj.m_targetAngle,obj.m_currentAngle);
+			return ret;
+		}
+		return 0;	
+}
+
+//reply the message
+void Reply(size_t fd,void *buffer,size_t size)
+{
+	printf("Send distance%d angle:%d\n",((MyPoint *)buffer)->distance,((MyPoint *)buffer)->angle);
+	while(1)
+	{
+		int ret = write(fd,buffer,size);
+		if(ret >= 0)
+			break;
+		if(errno != EAGAIN)
+			exit(EXIT_FAILURE);
+
+	}
+}
+
 int main(int argc, const char * argv[]) {
     const char * opt_com_path = NULL;
     _u32         opt_com_baudrate = 115200;
     u_result     op_result;
+
+    //insert by gz
+   // Object obj(1500);
+    Object obj(50);
+    DetectStrategy stt(obj,300);
+    DecisionStrategy ds;
+    vector<MyPoint> map(360);
+	
+    unsigned int pipeFds = GetFifo();
+    int replyFd = pipeFds & ((1 << (sizeof(unsigned int) * 8 / 2)) - 1);
+    int requestFd = pipeFds >> (sizeof(unsigned int) * 8/ 2);
+
 
     // read serial port from the command line...
     if (argc>1) opt_com_path = argv[1]; // or set to a fixed value: e.g. "com3" 
@@ -113,6 +210,7 @@ int main(int argc, const char * argv[]) {
     // start scan...
     drv->startScan();
 
+
     // fetech result and print it out...
     while (1) {
         rplidar_response_measurement_node_t nodes[360*2];
@@ -122,13 +220,47 @@ int main(int argc, const char * argv[]) {
 
         if (IS_OK(op_result)) {
             drv->ascendScanData(nodes, count);
-            for (int pos = 0; pos < (int)count ; ++pos) {
-                printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-                    (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
-                    (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
-                    nodes[pos].distance_q2/4.0f,
-                    nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-            }
+
+	    if(Request(requestFd,obj) != 0)
+	    {
+    		for(unsigned short i = 0;i < map.size();++i)
+    		{
+	    		map[i].angle = i;
+	    		map[i].distance = 0xffff;
+    		}
+            	for (int pos = 0; pos < (int)count ; ++pos) {
+			/*
+                	 printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
+                    	(nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
+                    	(nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
+                    	nodes[pos].distance_q2/4.0f,
+                    	nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
+			*/
+			if((nodes[pos].distance_q2 / 4.0f) != 0.0f)
+			{
+				map[(unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360].distance = (float)(nodes[pos].distance_q2 / 4.0f);
+			}
+            	}
+
+		for(int i = 0;i < 360;++i)
+		{
+			printf("angle %d,distance %d\n",map[i].angle,map[i].distance);
+		}
+
+	    	try
+	    	{
+		    MyPoint p = ds.Strategy(map,stt);
+		    Reply(replyFd,&p,sizeof(MyPoint));
+		    printf("angle : %d OK\n",p.angle);
+	    	}
+	    	catch(CannotDecide &e)
+	    	{
+		    //...
+		    MyPoint p;
+		    Reply(replyFd,&p,sizeof(MyPoint));
+		    printf("CRASH\n");
+		}	    
+	    }   
         }
 
     }

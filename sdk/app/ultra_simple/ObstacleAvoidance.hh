@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <vector>
 #include <iostream>
+#include <stdexcept>
 
 using namespace std;
 
@@ -41,13 +42,14 @@ struct Angle
 
 	Angle &operator ++()
 	{
-		m_angle = (++m_angle) % 360;
+		unsigned short angle = (++m_angle) % 360;
+		m_angle = angle;
 		return *this;
 	}
 	Angle operator ++(int)
 	{
 		Angle tmp(*this);
-		(*this)++;
+		++(*this);
 		return tmp;
 	}
 	Angle &operator --()
@@ -58,7 +60,7 @@ struct Angle
 	Angle operator --(int)
 	{
 		Angle tmp(*this);
-		(*this)--;
+		--(*this);
 		return tmp;
 	}
 	//顺时针旋转a°
@@ -115,6 +117,8 @@ struct MyPoint
 	unsigned short quality;
 	Angle angle;
 	unsigned short distance;
+	MyPoint(unsigned short q = 0,unsigned short a = 0,unsigned short d = 0) : quality(q),angle((unsigned short)q),distance(d)
+	{}
 	bool Available() const
 	{
 		return quality != 0;
@@ -140,6 +144,15 @@ struct Object
 };
 
 //--------------------------------------------探测策略------------------------------------------------------------------
+
+struct CannotDecide : runtime_error 
+{
+	CannotDecide():runtime_error("crash\n")
+	{
+	}
+};
+
+
 //飞行方向障碍点检测
 struct DetectStrategy
 {
@@ -210,7 +223,7 @@ struct DetectStrategy
 	{
 		if (p.distance < m_obj.m_size)
 		{
-			throw runtime_error("crash\n");
+			throw CannotDecide();
 		}
 		Angle a = asin((double)m_obj.m_size / p.distance);
 		//左安全边界横穿障碍点
@@ -220,7 +233,7 @@ struct DetectStrategy
 	{
 		if (p.distance < m_obj.m_size)
 		{
-			throw runtime_error("crash\n");
+			throw CannotDecide();
 		}
 		Angle a = asin((double)m_obj.m_size / p.distance);
 		//右安全边界横穿障碍点
@@ -310,6 +323,9 @@ struct DetectStrategy
 struct FlyStrategy
 {
 	virtual const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const = 0;
+	virtual ~FlyStrategy()
+	{
+	}
 };
 
 //正常飞行策略
@@ -326,7 +342,7 @@ struct CovexPolygonStrategy : public FlyStrategy
 
 const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const
 {
-	MyPoint destination{ 0,stt.m_obj.m_targetAngle,stt.m_safeDistance };
+	MyPoint destination(0,stt.m_obj.m_targetAngle,stt.m_safeDistance );
 
 	//偏左侧障碍
 	const MyPoint* leftObstacle = stt.ClockwiseScan(stt.m_obj.m_targetAngle, map);
@@ -363,8 +379,8 @@ const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectS
 
 const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const
 {
-	MyPoint destination{ 0,(unsigned short)0,0 };
-	Angle planAngle = stt.m_obj.m_targetAngle;
+	MyPoint destination;
+	//Angle planAngle = stt.m_obj.m_targetAngle;
 
 	//偏左侧障碍
 	const MyPoint* leftObstacle = stt.ClockwiseScan(stt.m_obj.m_targetAngle, map);
@@ -400,7 +416,6 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 
 	destination.angle = plan;
 	destination.distance = stt.m_safeDistance;
-
 	return destination;
 }
 
@@ -432,22 +447,22 @@ unsigned short Distance(const MyPoint& p1, const MyPoint& p2)
 }
 
 
-
+/*
 const MyPoint Decision(const DetectStrategy &stt, const Object &obj, const vector<MyPoint> &map)
 {
 	if (map.size() != 360)
 	{
 		return MyPoint();
 	}
-	MyPoint destination{ 0,(unsigned short)0,stt.m_safeDistance };
+	MyPoint destination( 0,0,stt.m_safeDistance );
 
 
 
 	return destination;
 }
+*/
 
-
-
+/*
 int main()
 {
 	Object obj(500);
@@ -485,4 +500,4 @@ int main()
 	//
 return		0;
 }
-
+*/
