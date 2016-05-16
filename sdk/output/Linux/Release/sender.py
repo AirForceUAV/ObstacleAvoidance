@@ -14,6 +14,7 @@ while 1:
     targetDirection = int(raw_input("Input Target Direction :   "))
 
     request.write(struct.pack("HH",targetDirection,0))
+    request.flush();
     print 'Write OK'
     pointFmt = "HHH"
     (quality,angle,distance) = struct.unpack(pointFmt,reply.read(struct.calcsize(pointFmt)))

@@ -4,7 +4,6 @@
 
 struct Angle
 {
-	//0 means Clockwise, default value
 	//1 means Anticlockwise
 	enum DIRECTION{CLOCKWISE,ANTICLOCKWISE};
 	unsigned short m_direction : 1;
@@ -12,14 +11,21 @@ struct Angle
 
 	Angle(short value= 0) : m_direction(0) ,  m_value(value)
 	{}
-	Angle(double radian) : m_direction(0)
+	Angle(const Angle &a)
 	{
-		m_value = (unsigned short)ceil(radian/M_PI * 180.0)%360;
+		m_direction = a.m_direction;
+		m_value = a.m_value;
 	}
 	Angle & operator = (unsigned short a)
 	{
 		m_value = a;
 		return *this;
+	}
+
+	//covert from radian to angle
+	void Radian(double radian)
+	{
+		m_value = (unsigned short)ceil(radian/M_PI * 180.0)%360;
 	}
 
 	//only compare the value without considing the direction
@@ -76,10 +82,6 @@ struct Angle
 		tmp += a;
 		return tmp;
 	}
-	Angle operator + (const Angle &a) const
-	{
-		return *this + a.m_value;
-	}
 	Angle& operator -= (short a) 
 	{
 		
@@ -99,10 +101,6 @@ struct Angle
 		tmp -= a;
 		return tmp;
 	}
-	Angle operator - (const Angle &a) const
-	{
-		return *this - a.m_value;
-	}
 
 	//the difference between this angle with a angle,the difference value isn't always greater than 180.
 	unsigned short absDiff(const Angle &a) const
@@ -118,6 +116,26 @@ struct Angle
 			diff = 360 - diff;
 		}
 		return diff;
+	}
+	//Is the angle between the start to end? irrespective the end point
+	bool between(const Angle &start,const Angle &end) const
+	{
+		if(start.m_direction ^ end.m_direction)
+		{//different directional angle cann't consider
+			return false;
+		}
+		else
+		{
+			Angle tmp(*this);
+			if(tmp.m_direction ^ start.m_direction)
+			{
+				tmp.m_value = 360 - tmp.m_value;
+			}
+			return 
+
+
+		}	
+
 	}
 };
 	

@@ -124,21 +124,22 @@ ReplyInit:
 int Request(size_t fd,Object &obj)
 {
 	Angle buffer[2];
-		int ret = read(fd,buffer,sizeof(Angle) * 2);
-		if(ret >= (int)sizeof(Angle )* 2)
+      	int ret = read(fd,buffer,sizeof(Angle) * 2);
+	if(ret > 0)//(int)sizeof(Angle )* 2)
+	{
+		if(buffer[0] <= 360 && buffer[1] <= 360)
 		{
 			obj.m_targetAngle = buffer[0];
 			obj.m_currentAngle = buffer[1];
-			printf("%d	%d\n",obj.m_targetAngle,obj.m_currentAngle);
 			return ret;
 		}
-		return 0;	
+	}
+	return 0;	
 }
 
 //reply the message
 void Reply(size_t fd,void *buffer,size_t size)
 {
-	printf("Send distance%d angle:%d\n",((MyPoint *)buffer)->distance,((MyPoint *)buffer)->angle);
 	while(1)
 	{
 		int ret = write(fd,buffer,size);
@@ -157,8 +158,8 @@ int main(int argc, const char * argv[]) {
 
     //insert by gz
    // Object obj(1500);
-    Object obj(50);
-    DetectStrategy stt(obj,300);
+    Object obj(argc < 2 ? 50 : atoi(argv[1]));
+    DetectStrategy stt(obj,argc < 3 ? 500 : atoi(argv[2]));
     DecisionStrategy ds;
     vector<MyPoint> map(360);
 	
@@ -168,10 +169,10 @@ int main(int argc, const char * argv[]) {
 
 
     // read serial port from the command line...
-    if (argc>1) opt_com_path = argv[1]; // or set to a fixed value: e.g. "com3" 
+    //if (argc>1) opt_com_path = argv[1]; // or set to a fixed value: e.g. "com3" 
 
     // read baud rate from the command line if specified...
-    if (argc>2) opt_com_baudrate = strtoul(argv[2], NULL, 10);
+    //if (argc>2) opt_com_baudrate = strtoul(argv[2], NULL, 10);
 
 
     if (!opt_com_path) {
@@ -244,14 +245,13 @@ int main(int argc, const char * argv[]) {
 
 		for(int i = 0;i < 360;++i)
 		{
-			printf("angle %d,distance %d\n",map[i].angle,map[i].distance);
+//			printf("angle %d,distance %d\n",map[i].angle,map[i].distance);
 		}
 
 	    	try
 	    	{
 		    MyPoint p = ds.Strategy(map,stt);
 		    Reply(replyFd,&p,sizeof(MyPoint));
-		    printf("angle : %d OK\n",p.angle);
 	    	}
 	    	catch(CannotDecide &e)
 	    	{

@@ -104,10 +104,10 @@ struct Angle
 	}
 	//不包括尾端end的
 	//顺时针判断
-	bool IsBelong(const Angle& begin, const Angle &end) const
-	{
-		return (*this + begin).m_angle < end.m_angle;
-	}
+	//bool IsBelong(const Angle& begin, const Angle &end) const
+	//{
+	//	return (*this + begin).m_angle < end.m_angle;
+	//}
 
 };
 
@@ -117,7 +117,7 @@ struct MyPoint
 	unsigned short quality;
 	Angle angle;
 	unsigned short distance;
-	MyPoint(unsigned short q = 0,unsigned short a = 0,unsigned short d = 0) : quality(q),angle((unsigned short)q),distance(d)
+	MyPoint(unsigned short q = 0,unsigned short a = 0,unsigned short d = 0) : quality(q),angle((unsigned short)a),distance(d)
 	{}
 	bool Available() const
 	{
@@ -204,7 +204,8 @@ struct DetectStrategy
 	bool Detect(const Angle &angle, unsigned short distance) const
 	{
 
-		if (angle.IsBelong((unsigned short)90, (unsigned short)0))
+	//	if (angle.IsBelong((unsigned short)90, (unsigned short)0))
+		if(angle.m_angle >= 90)	
 		{//不在检测范围之内
 			return false;
 		}
@@ -244,11 +245,11 @@ struct DetectStrategy
 	//顺时针扫描到target
 	const MyPoint* ClockwiseScan(const Angle& target, const vector<MyPoint> &map) const
 	{
-		for (unsigned short i = 90; i != 0xffff; --i)
+		for (unsigned short i = 180; i != 0xffff; --i)
 		{
-			if (Detect(target, map[target - i]))
+			if (Detect(target, map[target + (unsigned short)90 - i]))
 			{
-				return &map[target - i];
+				return &map[target + (unsigned short)90 - i];
 			}
 		}
 		return NULL;
@@ -256,11 +257,11 @@ struct DetectStrategy
 	//逆时针扫描到target
 	const MyPoint* AnticlockwiseScan(const Angle& target, const vector<MyPoint> &map) const
 	{
-		for (unsigned short i = 90; i != 0xffff; --i)
+		for (unsigned short i = 180; i != 0xffff; --i)
 		{
-			if (Detect(target, map[target + i]))
+			if (Detect(target, map[target - (unsigned short)90 + i]))
 			{
-				return &map[target + i];
+				return &map[target - (unsigned short)90 + i];
 			}
 		}
 		return NULL;
@@ -270,13 +271,19 @@ struct DetectStrategy
 	//顺时针寻找可行方案
 	const Angle ClockwiseSearch(const MyPoint* obstacle, const vector<MyPoint> &map) const
 	{
+#ifdef DEBUG
+		cout<<"Clockwise"<<endl;
+#endif
 		if (obstacle)
 		{
 			Angle lastCandidate(obstacle->angle);
 			for (unsigned short i = 0; i <= 360;)
 			{
 				Angle candidate = ClockwiseMove(*obstacle);
-
+#ifdef DEBUG
+				cout<<"obstacle : "<<obstacle->angle.m_angle<<" distance : " <<obstacle->distance;
+				cout<<"	candidate : "<<candidate.m_angle<<endl;
+#endif
 				i += lastCandidate.absDiff(candidate);
 				lastCandidate = candidate;
 
@@ -294,15 +301,22 @@ struct DetectStrategy
 	//逆时针寻找可行方案
 	const Angle AnticlockwiseSearch(const MyPoint* obstacle, const vector<MyPoint> &map) const
 	{
+#ifdef DEBUG
+		cout<<"Anticlockwise"<<endl;
+#endif
 		if (obstacle)
 		{
 			Angle lastCandidate(obstacle->angle);
 			for (unsigned short i = 0; i <= 360;)
 			{
 				Angle candidate = AnticlockwiseMove(*obstacle);
-
+#ifdef DEBUG				
+				cout<<"obstacle : "<<obstacle->angle.m_angle<<" distance : " <<obstacle->distance;
+				cout<<"	candidate : "<<candidate.m_angle<<endl;
+#endif
 				i += lastCandidate.absDiff(candidate);
 				lastCandidate = candidate;
+
 
 				obstacle = ClockwiseScan(candidate, map);
 				if (!obstacle)
@@ -342,17 +356,31 @@ struct CovexPolygonStrategy : public FlyStrategy
 
 const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const
 {
+#ifdef DEBUG
+	cout<<"Noraml"<<endl;
+#endif
 	MyPoint destination(0,stt.m_obj.m_targetAngle,stt.m_safeDistance );
 
 	//偏左侧障碍
 	const MyPoint* leftObstacle = stt.ClockwiseScan(stt.m_obj.m_targetAngle, map);
 	//偏右侧障碍物
 	const MyPoint* rightObstacle = stt.AnticlockwiseScan(stt.m_obj.m_targetAngle, map);
+#ifdef DEBUG
+	if(leftObstacle)
+	{
+		cout << "left obstacle angle : "<<leftObstacle->angle.m_angle << "	distance : " << leftObstacle->distance <<endl;
+	}
+	if(rightObstacle)
+	{
+		cout << "right obstacle angle : "<<rightObstacle->angle.m_angle << "	distance : " << rightObstacle->distance <<endl;
+	}
+#endif
 	//当前飞行方向无障碍
 	if (leftObstacle == NULL && rightObstacle == NULL)
 	{
 		return destination;
 	}
+	
 
 	//cw为顺时针寻找出路
 	//acw为逆时针寻找出路
@@ -379,6 +407,9 @@ const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectS
 
 const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const
 {
+#ifdef DEBUG
+	cout<<"CovexPolygon"<<endl;
+#endif
 	MyPoint destination;
 	//Angle planAngle = stt.m_obj.m_targetAngle;
 
@@ -387,6 +418,16 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 	//偏右侧障碍物
 	const MyPoint* rightObstacle = stt.AnticlockwiseScan(stt.m_obj.m_targetAngle, map);
 
+#ifdef DEBUG
+	if(leftObstacle)
+	{
+		cout << "left obstacle angle : "<<leftObstacle->angle.m_angle << "	distance : " << leftObstacle->distance <<endl;
+	}
+	if(rightObstacle)
+	{
+		cout << "right obstacle angle : "<<rightObstacle->angle.m_angle << "	distance : " << rightObstacle->distance <<endl;
+	}
+#endif
 	//当前飞行方向无障碍
 	if (leftObstacle == NULL && rightObstacle == NULL)
 	{
@@ -397,14 +438,17 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 		return destination;
 	}
 
+	
+
 	//计划方向
 	Angle plan((unsigned short)0xffff);
 	//在当目标飞行方向和当前飞行方向之间寻找最优方向
-	if (stt.m_obj.m_targetAngle + (unsigned short)90 >= stt.m_obj.m_currentAngle)
+	//if (stt.m_obj.m_currentAngle -  (unsigned short)90 <= stt.m_obj.m_targetAngle)
+	if((stt.m_obj.m_targetAngle + (unsigned short)90).absDiff(stt.m_obj.m_currentAngle).m_angle <= 90)
 	{//顺时针方向寻找出路
 		plan = stt.ClockwiseSearch(rightObstacle ? rightObstacle : leftObstacle, map);
 	}
-	else if (stt.m_obj.m_currentAngle + (unsigned short)90 >= stt.m_obj.m_targetAngle)
+	else //if (stt.m_obj.m_currentAngle + (unsigned short)90 >= stt.m_obj.m_targetAngle)
 	{//逆时针方向寻找出路
 		plan = stt.AnticlockwiseSearch(leftObstacle ? leftObstacle : rightObstacle, map);
 	}
@@ -432,6 +476,9 @@ struct DecisionStrategy
 	}
 	const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt)
 	{
+#ifdef DEBUG
+		cout<<"----------------------------------------------------"<<endl;
+#endif
 		return m_currentStrategy->Strategy(map, stt, &m_currentStrategy);
 	}
 };
