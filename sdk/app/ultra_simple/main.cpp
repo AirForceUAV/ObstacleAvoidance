@@ -48,26 +48,26 @@ using namespace rp::standalone::rplidar;
 
 bool checkRPLIDARHealth(RPlidarDriver * drv)
 {
-    u_result     op_result;
-    rplidar_response_device_health_t healthinfo;
+	u_result     op_result;
+	rplidar_response_device_health_t healthinfo;
 
 
-    op_result = drv->getHealth(healthinfo);
-    if (IS_OK(op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
-        printf("RPLidar health status : %d\n", healthinfo.status);
-        if (healthinfo.status == RPLIDAR_STATUS_ERROR) {
-            fprintf(stderr, "Error, rplidar internal error detected. Please reboot the device to retry.\n");
-            // enable the following code if you want rplidar to be reboot by software
-            // drv->reset();
-            return false;
-        } else {
-            return true;
-        }
+	op_result = drv->getHealth(healthinfo);
+	if (IS_OK(op_result)) { // the macro IS_OK is the preperred way to judge whether the operation is succeed.
+		printf("RPLidar health status : %d\n", healthinfo.status);
+		if (healthinfo.status == RPLIDAR_STATUS_ERROR) {
+			fprintf(stderr, "Error, rplidar internal error detected. Please reboot the device to retry.\n");
+			// enable the following code if you want rplidar to be reboot by software
+			// drv->reset();
+			return false;
+		} else {
+			return true;
+		}
 
-    } else {
-        fprintf(stderr, "Error, cannot retrieve the lidar health code: %x\n", op_result);
-        return false;
-    }
+	} else {
+		fprintf(stderr, "Error, cannot retrieve the lidar health code: %x\n", op_result);
+		return false;
+	}
 }
 
 //request pipe name.request the direction
@@ -78,6 +78,7 @@ bool checkRPLIDARHealth(RPlidarDriver * drv)
 unsigned int GetFifo()
 {
 	unsigned int pipeFd = 0;
+	printf("Waiting for receiver starting...\n");
 	if(access(REQUESTPIPE,F_OK | R_OK) == -1)
 	{
 		if(mkfifo(REQUESTPIPE,0777))
@@ -95,7 +96,7 @@ unsigned int GetFifo()
 			exit(EXIT_FAILURE);
 		}
 	}
-	
+
 	//high-order restore the request pipe file descriptor
 RequestFdInit:
 	int fd = open(REQUESTPIPE,O_RDONLY | O_NONBLOCK);
@@ -106,7 +107,7 @@ RequestFdInit:
 	}
 	pipeFd |= fd;
 	pipeFd <<= (sizeof(unsigned int) * 8 / 2);
-	
+
 	//low-order restore the reply pipe file descriptor.
 ReplyInit:
 	fd = open(REPLYPIPE, O_WRONLY | O_NONBLOCK);
@@ -116,6 +117,7 @@ ReplyInit:
 		exit(EXIT_FAILURE);
 	}
 	pipeFd |= fd;
+	printf("Receiver has been ready!\n");
 	return pipeFd;		
 }
 
@@ -124,7 +126,7 @@ ReplyInit:
 int Request(size_t fd,Object &obj)
 {
 	Angle buffer[2];
-      	int ret = read(fd,buffer,sizeof(Angle) * 2);
+	int ret = read(fd,buffer,sizeof(Angle) * 2);
 	if(ret > 0)//(int)sizeof(Angle )* 2)
 	{
 		if(buffer[0] <= 360 && buffer[1] <= 360)
@@ -152,121 +154,113 @@ void Reply(size_t fd,void *buffer,size_t size)
 }
 
 int main(int argc, const char * argv[]) {
-    const char * opt_com_path = NULL;
-    _u32         opt_com_baudrate = 115200;
-    u_result     op_result;
+	Object obj(argc < 3 ? 50 : atoi(argv[2]));
+	DetectStrategy stt(obj,argc < 4 ? 500 : atoi(argv[3]));
+	DecisionStrategy ds;
+	vector<MyPoint> map(360);
+	unsigned int pipeFds = GetFifo();
+	int replyFd = pipeFds & ((1 << (sizeof(unsigned int) * 8 / 2)) - 1);
+	int requestFd = pipeFds >> (sizeof(unsigned int) * 8/ 2);
 
-    //insert by gz
-   // Object obj(1500);
-    Object obj(argc < 2 ? 50 : atoi(argv[1]));
-    DetectStrategy stt(obj,argc < 3 ? 500 : atoi(argv[2]));
-    DecisionStrategy ds;
-    vector<MyPoint> map(360);
-	
-    unsigned int pipeFds = GetFifo();
-    int replyFd = pipeFds & ((1 << (sizeof(unsigned int) * 8 / 2)) - 1);
-    int requestFd = pipeFds >> (sizeof(unsigned int) * 8/ 2);
+	const char * opt_com_path = NULL;
+	_u32         opt_com_baudrate = 115200;
+	u_result     op_result;
 
+	// read serial port from the command line...
+	if (argc>1) opt_com_path = argv[1]; // or set to a fixed value: e.g. "com3" 
 
-    // read serial port from the command line...
-    //if (argc>1) opt_com_path = argv[1]; // or set to a fixed value: e.g. "com3" 
-
-    // read baud rate from the command line if specified...
-    //if (argc>2) opt_com_baudrate = strtoul(argv[2], NULL, 10);
+	// read baud rate from the command line if specified...
+	//if (argc>2) opt_com_baudrate = strtoul(argv[2], NULL, 10);
 
 
-    if (!opt_com_path) {
+	if (!opt_com_path) {
 #ifdef _WIN32
-        // use default com port
-        opt_com_path = "\\\\.\\com3";
+		// use default com port
+		opt_com_path = "\\\\.\\com3";
 #else
-        opt_com_path = "/dev/ttyUSB0";
+		opt_com_path = "/dev/ttyUSB0";
 #endif
-    }
+	}
 
-    // create the driver instance
-    RPlidarDriver * drv = RPlidarDriver::CreateDriver(RPlidarDriver::DRIVER_TYPE_SERIALPORT);
-    
-    if (!drv) {
-        fprintf(stderr, "insufficent memory, exit\n");
-        exit(-2);
-    }
+	// create the driver instance
+	RPlidarDriver * drv = RPlidarDriver::CreateDriver(RPlidarDriver::DRIVER_TYPE_SERIALPORT);
 
-
-    // make connection...
-    if (IS_FAIL(drv->connect(opt_com_path, opt_com_baudrate))) {
-        fprintf(stderr, "Error, cannot bind to the specified serial port %s.\n"
-            , opt_com_path);
-        goto on_finished;
-    }
+	if (!drv) {
+		fprintf(stderr, "insufficent memory, exit\n");
+		exit(-2);
+	}
 
 
+	// make connection...
+	if (IS_FAIL(drv->connect(opt_com_path, opt_com_baudrate))) {
+		fprintf(stderr, "Error, cannot bind to the specified serial port %s.\n"
+				, opt_com_path);
+		goto on_finished;
+	}
 
-    // check health...
-    if (!checkRPLIDARHealth(drv)) {
-        goto on_finished;
-    }
+	// check health...
+	if (!checkRPLIDARHealth(drv)) {
+		goto on_finished;
+	}
 
+	// start scan...
+	drv->startScan();
 
-    // start scan...
-    drv->startScan();
+	// fetech result and print it out...
+	while (1) {
+		rplidar_response_measurement_node_t nodes[360*2];
+		size_t   count = _countof(nodes);
 
+		op_result = drv->grabScanData(nodes, count);
 
-    // fetech result and print it out...
-    while (1) {
-        rplidar_response_measurement_node_t nodes[360*2];
-        size_t   count = _countof(nodes);
+		if (IS_OK(op_result)) {
+			drv->ascendScanData(nodes, count);
 
-        op_result = drv->grabScanData(nodes, count);
-
-        if (IS_OK(op_result)) {
-            drv->ascendScanData(nodes, count);
-
-	    if(Request(requestFd,obj) != 0)
-	    {
-    		for(unsigned short i = 0;i < map.size();++i)
-    		{
-	    		map[i].angle = i;
-	    		map[i].distance = 0xffff;
-    		}
-            	for (int pos = 0; pos < (int)count ; ++pos) {
-			/*
-                	 printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
-                    	(nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
-                    	(nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
-                    	nodes[pos].distance_q2/4.0f,
-                    	nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-			*/
-			if((nodes[pos].distance_q2 / 4.0f) != 0.0f)
+			if(Request(requestFd,obj) != 0)
 			{
-				map[(unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360].distance = (float)(nodes[pos].distance_q2 / 4.0f);
-			}
-            	}
+				for(unsigned short i = 0;i < map.size();++i)
+				{
+					map[i].angle = i;
+					map[i].distance = 0xffff;
+				}
+				for (int pos = 0; pos < (int)count ; ++pos) {
+					/*
+					   printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
+					   (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
+					   (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
+					   nodes[pos].distance_q2/4.0f,
+					   nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
+					   */
+					if((nodes[pos].distance_q2 / 4.0f) != 0.0f)
+					{
+						map[(unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360].distance = (float)(nodes[pos].distance_q2 / 4.0f);
+					}
+				}
 
-		for(int i = 0;i < 360;++i)
-		{
-//			printf("angle %d,distance %d\n",map[i].angle,map[i].distance);
+				for(int i = 0;i < 360;++i)
+				{
+					//			printf("angle %d,distance %d\n",map[i].angle,map[i].distance);
+				}
+
+				try
+				{
+					MyPoint p = ds.Strategy(map,stt);
+					Reply(replyFd,&p,sizeof(MyPoint));
+				}
+				catch(CannotDecide &e)
+				{
+					//...
+					MyPoint p;
+					Reply(replyFd,&p,sizeof(MyPoint));
+					printf("CRASH\n");
+				}	    
+			}   
 		}
 
-	    	try
-	    	{
-		    MyPoint p = ds.Strategy(map,stt);
-		    Reply(replyFd,&p,sizeof(MyPoint));
-	    	}
-	    	catch(CannotDecide &e)
-	    	{
-		    //...
-		    MyPoint p;
-		    Reply(replyFd,&p,sizeof(MyPoint));
-		    printf("CRASH\n");
-		}	    
-	    }   
-        }
+	}
 
-    }
-
-    // done!
+	// done!
 on_finished:
-    RPlidarDriver::DisposeDriver(drv);
-    return 0;
+	RPlidarDriver::DisposeDriver(drv);
+	return 0;
 }
