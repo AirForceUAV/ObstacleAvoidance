@@ -1,6 +1,7 @@
 import os
 import struct
 import sys
+import time
 
 class Strategy(object) : 
     _pipeSet = {}
@@ -21,9 +22,13 @@ class Strategy(object) :
 
 pid = os.fork()
 if pid == 0:
-    os.system("./ultra_simple /dev/ttyUSB1")
+    os.execl("./ultra_simple","")# /dev/ttyUSB1")
     exit(0)
 
 strategy = Strategy("./Reply","./Request")
-print strategy.Decision(0)
+
+if __name__ == "__main__" :
+    while True:
+        print strategy.Decision(0)
+        time.sleep(1)
 
