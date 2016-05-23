@@ -237,7 +237,7 @@ int main(int argc, const char * argv[]) {
 					   nodes[pos].distance_q2/4.0f,
 					   nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
 					   */
-					if((nodes[pos].distance_q2 / 4.0f) != 0.0f)
+					if((nodes[pos].distance_q2 / 4.0f) >= obj.m_size)//0.0f)
 					{
 						map[(unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360].distance = (float)(nodes[pos].distance_q2 / 4.0f);
 					}
