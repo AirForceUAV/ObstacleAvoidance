@@ -26,7 +26,7 @@
  *
  */
 
-
+#define DEBUG
 
 
 #include <stdio.h>
@@ -37,7 +37,9 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include "rplidar.h" //RPLIDAR standard sdk, all-in-one header
+
 #include "ObstacleAvoidance.hh"
+#include <sys/prctl.h>
 
 #ifndef _countof
 #define _countof(_Array) (int)(sizeof(_Array) / sizeof(_Array[0]))
@@ -154,6 +156,9 @@ void Reply(size_t fd,void *buffer,size_t size)
 }
 
 int main(int argc, const char * argv[]) {
+
+	prctl(PR_SET_PDEATHSIG,9);
+
 	Object obj(argc < 3 ? 50 : atoi(argv[2]));
 	DetectStrategy stt(obj,argc < 4 ? 500 : atoi(argv[3]));
 	DecisionStrategy ds;
@@ -185,6 +190,7 @@ int main(int argc, const char * argv[]) {
 	// create the driver instance
 	RPlidarDriver * drv = RPlidarDriver::CreateDriver(RPlidarDriver::DRIVER_TYPE_SERIALPORT);
 
+	drv->reset();
 	if (!drv) {
 		fprintf(stderr, "insufficent memory, exit\n");
 		exit(-2);
@@ -237,11 +243,6 @@ int main(int argc, const char * argv[]) {
 					}
 				}
 
-				for(int i = 0;i < 360;++i)
-				{
-					//			printf("angle %d,distance %d\n",map[i].angle,map[i].distance);
-				}
-
 				try
 				{
 					MyPoint p = ds.Strategy(map,stt);
@@ -262,5 +263,8 @@ int main(int argc, const char * argv[]) {
 	// done!
 on_finished:
 	RPlidarDriver::DisposeDriver(drv);
+	close(requestFd);
+	close(replyFd);
+
 	return 0;
 }

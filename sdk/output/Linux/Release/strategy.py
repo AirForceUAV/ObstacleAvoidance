@@ -21,7 +21,7 @@ class Strategy(object) :
 
 pid = os.fork()
 if pid == 0:
-    os.system("sudo ./ultra_simple")
+    os.system("./ultra_simple /dev/ttyUSB1")
     exit(0)
 
 strategy = Strategy("./Reply","./Request")
