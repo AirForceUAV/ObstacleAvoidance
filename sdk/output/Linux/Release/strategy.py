@@ -14,11 +14,13 @@ class Strategy(object) :
         self.reply= Strategy._pipeSet[(replyPipe,requestPipe)]["Reply"]
 
     def Decision(self,targetDirection):
+        targetDirection = (360 - targetDirection) % 360
         self.request.write(struct.pack("HH",targetDirection,0))
         self.request.flush()
         pointFmt = "HHH"
         (quality,angle,distance) = struct.unpack(pointFmt,self.reply.read(struct.calcsize(pointFmt)))
-        return (angle,distance)
+        angle = (360 - angle) %360;
+        return (distance,angle)
 
 pid = os.fork()
 if pid == 0:

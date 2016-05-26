@@ -230,16 +230,19 @@ int main(int argc, const char * argv[]) {
 					map[i].distance = 0xffff;
 				}
 				for (int pos = 0; pos < (int)count ; ++pos) {
-					/*
+				/*	
 					   printf("%s theta: %03.2f Dist: %08.2f Q: %d \n", 
 					   (nodes[pos].sync_quality & RPLIDAR_RESP_MEASUREMENT_SYNCBIT) ?"S ":"  ", 
 					   (nodes[pos].angle_q6_checkbit >> RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f,
 					   nodes[pos].distance_q2/4.0f,
 					   nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT);
-					   */
-					if((nodes[pos].distance_q2 / 4.0f) >= obj.m_size)//0.0f)
+				*/	   
+					unsigned short angle = (unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360;
+					unsigned short distance = (nodes[pos].distance_q2 / 4.0f);
+					unsigned short quality = nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT;
+					if(distance >= obj.m_size && quality >= 9)
 					{
-						map[(unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360].distance = (float)(nodes[pos].distance_q2 / 4.0f);
+						map[angle].distance = distance; 
 					}
 				}
 
