@@ -400,7 +400,8 @@ const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectS
 	else
 	{
 		cout << "CovexPloygon" << endl;
-		throw runtime_error("CovexPloygon");
+		//throw runtime_error("CovexPloygon");
+		throw CannotDecide();
 	}
 	return destination;
 }
@@ -455,7 +456,8 @@ const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const D
 
 	if (plan > Angle((unsigned short)360))
 	{
-		throw runtime_error("no way out");
+		//throw runtime_error("no way out");
+		throw CannotDecide();
 	}
 
 	destination.angle = plan;
