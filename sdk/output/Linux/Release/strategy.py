@@ -20,11 +20,11 @@ class Strategy(object) :
         pointFmt = "HHH"
         (quality,angle,distance) = struct.unpack(pointFmt,self.reply.read(struct.calcsize(pointFmt)))
         angle = (360 - angle) %360;
-        return (distance,angle)
+        return (distance / 1000.0,angle)
 
 pid = os.fork()
 if pid == 0:
-    os.execl("./ultra_simple","")# /dev/ttyUSB1")
+    os.execl("./ultra_simple","ultra_simple","/dev/ttyUSB1","1500","3000","")
     exit(0)
 
 strategy = Strategy("./Reply","./Request")
