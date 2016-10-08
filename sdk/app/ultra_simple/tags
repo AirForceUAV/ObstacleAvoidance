@@ -1,0 +1,80 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ANTICLOCKWISE	ObstacleAvoidance.hh	/^		ANTICLOCKWISE$/;"	e	enum:Angle::DIRECTION
+Angle	ObstacleAvoidance.hh	/^	Angle(const Angle& a) : m_angle(a.m_angle)$/;"	f	struct:Angle
+Angle	ObstacleAvoidance.hh	/^	Angle(double radian)$/;"	f	struct:Angle
+Angle	ObstacleAvoidance.hh	/^	Angle(unsigned short angle = 0) :m_angle(angle)$/;"	f	struct:Angle
+Angle	ObstacleAvoidance.hh	/^struct Angle$/;"	s
+AnticlockwiseMove	ObstacleAvoidance.hh	/^	Angle AnticlockwiseMove(const MyPoint& p) const$/;"	f	struct:DetectStrategy
+AnticlockwiseScan	ObstacleAvoidance.hh	/^	const MyPoint* AnticlockwiseScan(const Angle& target, const vector<MyPoint> &map) const$/;"	f	struct:DetectStrategy
+AnticlockwiseSearch	ObstacleAvoidance.hh	/^	const Angle AnticlockwiseSearch(const MyPoint* obstacle, const vector<MyPoint> &map) const$/;"	f	struct:DetectStrategy
+Available	ObstacleAvoidance.hh	/^	bool Available() const$/;"	f	struct:MyPoint
+CLOCKWISE	ObstacleAvoidance.hh	/^		CLOCKWISE,$/;"	e	enum:Angle::DIRECTION
+CannotDecide	ObstacleAvoidance.hh	/^	CannotDecide():runtime_error("crash\\n")$/;"	f	struct:CannotDecide
+CannotDecide	ObstacleAvoidance.hh	/^struct CannotDecide : runtime_error $/;"	s
+ClockwiseMove	ObstacleAvoidance.hh	/^	Angle ClockwiseMove(const MyPoint& p) const$/;"	f	struct:DetectStrategy
+ClockwiseScan	ObstacleAvoidance.hh	/^	const MyPoint* ClockwiseScan(const Angle& target, const vector<MyPoint> &map) const$/;"	f	struct:DetectStrategy
+ClockwiseSearch	ObstacleAvoidance.hh	/^	const Angle ClockwiseSearch(const MyPoint* obstacle, const vector<MyPoint> &map) const$/;"	f	struct:DetectStrategy
+CovexPolygonStrategy	ObstacleAvoidance.hh	/^struct CovexPolygonStrategy : public FlyStrategy$/;"	s
+DEBUG	main.cpp	29;"	d	file:
+DIRECTION	ObstacleAvoidance.hh	/^	enum DIRECTION$/;"	g	struct:Angle
+DecisionStrategy	ObstacleAvoidance.hh	/^	DecisionStrategy() : m_currentStrategy(new NormalStrategy())$/;"	f	struct:DecisionStrategy
+DecisionStrategy	ObstacleAvoidance.hh	/^struct DecisionStrategy$/;"	s
+Detect	ObstacleAvoidance.hh	/^	bool Detect(const Angle &angle, unsigned short distance) const$/;"	f	struct:DetectStrategy
+Detect	ObstacleAvoidance.hh	/^	bool Detect(const Angle &target, const MyPoint& point) const$/;"	f	struct:DetectStrategy
+Detect	ObstacleAvoidance.hh	/^	bool Detect(const MyPoint& point) const$/;"	f	struct:DetectStrategy
+DetectStrategy	ObstacleAvoidance.hh	/^	DetectStrategy(const Object& obj, unsigned short safeDistance = 0) :m_obj(obj)$/;"	f	struct:DetectStrategy
+DetectStrategy	ObstacleAvoidance.hh	/^struct DetectStrategy$/;"	s
+Distance	ObstacleAvoidance.hh	/^unsigned short Distance(const MyPoint& p1, const MyPoint& p2)$/;"	f
+EXTRA_OBJ	Makefile	/^EXTRA_OBJ := $/;"	m
+FlyStrategy	ObstacleAvoidance.hh	/^struct FlyStrategy$/;"	s
+GetFifo	main.cpp	/^unsigned int GetFifo()$/;"	f
+HOME_TREE	Makefile	/^HOME_TREE := ..\/..\/$/;"	m
+MODULE_NAME	Makefile	/^MODULE_NAME := $(notdir $(CURDIR))$/;"	m
+M_PI	ObstacleAvoidance.hh	15;"	d
+Modify	ObstacleAvoidance.hh	/^	void Modify(short safeDistance)$/;"	f	struct:DetectStrategy
+MyPoint	ObstacleAvoidance.hh	/^	MyPoint(unsigned short q = 0,unsigned short a = 0,unsigned short d = 0) : quality(q),angle((unsigned short)a),distance(d)$/;"	f	struct:MyPoint
+MyPoint	ObstacleAvoidance.hh	/^struct MyPoint$/;"	s
+NormalStrategy	ObstacleAvoidance.hh	/^struct NormalStrategy :public FlyStrategy$/;"	s
+Object	ObstacleAvoidance.hh	/^	Object(short size) :m_size(size), m_targetAngle((unsigned short)0), m_currentAngle((unsigned short)0)$/;"	f	struct:Object
+Object	ObstacleAvoidance.hh	/^struct Object$/;"	s
+REPLYPIPE	main.cpp	78;"	d	file:
+REQUESTPIPE	main.cpp	76;"	d	file:
+Reply	main.cpp	/^void Reply(size_t fd,void *buffer,size_t size)$/;"	f
+Request	main.cpp	/^int Request(size_t fd,Object &obj)$/;"	f
+SetTarget	ObstacleAvoidance.hh	/^	void SetTarget(unsigned short angle)$/;"	f	struct:Object
+Strategy	ObstacleAvoidance.hh	/^	const MyPoint Strategy(const vector<MyPoint> &map, const DetectStrategy &stt)$/;"	f	struct:DecisionStrategy
+Strategy	ObstacleAvoidance.hh	/^const MyPoint CovexPolygonStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const$/;"	f	class:CovexPolygonStrategy
+Strategy	ObstacleAvoidance.hh	/^const MyPoint NormalStrategy::Strategy(const vector<MyPoint> &map, const DetectStrategy &stt, FlyStrategy **currentStrategy) const$/;"	f	class:NormalStrategy
+_countof	main.cpp	45;"	d	file:
+absDiff	ObstacleAvoidance.hh	/^	Angle absDiff(const Angle &a) const$/;"	f	struct:Angle
+angle	ObstacleAvoidance.hh	/^	Angle angle;$/;"	m	struct:MyPoint
+checkRPLIDARHealth	main.cpp	/^bool checkRPLIDARHealth(RPlidarDriver * drv)$/;"	f
+distance	ObstacleAvoidance.hh	/^	unsigned short distance;$/;"	m	struct:MyPoint
+m_angle	ObstacleAvoidance.hh	/^	unsigned short m_angle;$/;"	m	struct:Angle
+m_currentAngle	ObstacleAvoidance.hh	/^	Angle m_currentAngle;$/;"	m	struct:Object
+m_currentStrategy	ObstacleAvoidance.hh	/^	FlyStrategy *m_currentStrategy;$/;"	m	struct:DecisionStrategy
+m_obj	ObstacleAvoidance.hh	/^	const Object& m_obj;$/;"	m	struct:DetectStrategy
+m_safeDistance	ObstacleAvoidance.hh	/^	unsigned short m_safeDistance;$/;"	m	struct:DetectStrategy
+m_safeScope	ObstacleAvoidance.hh	/^	unsigned short m_safeScope[91];$/;"	m	struct:DetectStrategy
+m_size	ObstacleAvoidance.hh	/^	unsigned short m_size;$/;"	m	struct:Object
+m_targetAngle	ObstacleAvoidance.hh	/^	Angle m_targetAngle;$/;"	m	struct:Object
+main	main.cpp	/^int main(int argc, const char * argv[]) {$/;"	f
+operator +	ObstacleAvoidance.hh	/^	Angle operator + (const Angle& a) const$/;"	f	struct:Angle
+operator +	ObstacleAvoidance.hh	/^	Angle operator + (unsigned short a) const$/;"	f	struct:Angle
+operator ++	ObstacleAvoidance.hh	/^	Angle &operator ++()$/;"	f	struct:Angle
+operator ++	ObstacleAvoidance.hh	/^	Angle operator ++(int)$/;"	f	struct:Angle
+operator -	ObstacleAvoidance.hh	/^	Angle operator - (const Angle& a) const$/;"	f	struct:Angle
+operator -	ObstacleAvoidance.hh	/^	Angle operator - (unsigned short a) const$/;"	f	struct:Angle
+operator --	ObstacleAvoidance.hh	/^	Angle &operator --()$/;"	f	struct:Angle
+operator --	ObstacleAvoidance.hh	/^	Angle operator --(int)$/;"	f	struct:Angle
+operator <	ObstacleAvoidance.hh	/^	bool operator < (const Angle &a) const$/;"	f	struct:Angle
+operator >	ObstacleAvoidance.hh	/^	bool operator > (const Angle &a) const$/;"	f	struct:Angle
+operator unsigned short	ObstacleAvoidance.hh	/^	operator unsigned short() const$/;"	f	struct:Angle
+quality	ObstacleAvoidance.hh	/^	unsigned short quality;$/;"	m	struct:MyPoint
+~DecisionStrategy	ObstacleAvoidance.hh	/^	~DecisionStrategy()$/;"	f	struct:DecisionStrategy
+~FlyStrategy	ObstacleAvoidance.hh	/^	virtual ~FlyStrategy()$/;"	f	struct:FlyStrategy

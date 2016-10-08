@@ -106,7 +106,7 @@ CXX_INCLUDES += $(C_INCLUDES)
 # gnu89 - c89 plus GCC extensions
 # c99   - ISO C99 standard (not yet fully implemented)
 # gnu99 - c99 plus GCC extensions
-CSTANDARD = -std=gnu99
+CSTANDARD = -std=gnu++11
 CDEBUG = -g$(DEBUG_TYPE)
 CWARN = -Wall 
 CTUNING = -funsigned-char 
