@@ -297,7 +297,7 @@ int main(int argc, const char * argv[]) {
                     unsigned short angle = (unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360;
                     unsigned short distance = (nodes[pos].distance_q2 / 4.0f);
                     unsigned short quality = nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT;
-                    if (distance > 1000)
+                    if (distance > 1500)
                     {
                         map[angle].distance = distance; 
                         map[angle].quality = quality;
