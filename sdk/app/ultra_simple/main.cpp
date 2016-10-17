@@ -215,8 +215,8 @@ void ValueFilter(vector<MyPoint> &map, unsigned char lbound)
 int main(int argc, const char * argv[]) {
 
     prctl(PR_SET_PDEATHSIG,9);
-
-    Object obj(argc < 3 ? 50 : atoi(argv[2]));
+    int uav_size = (argc < 3 ? 50 : atoi(argv[2]));
+    Object obj(uav_size);
     DetectStrategy stt(obj,argc < 4 ? 500 : atoi(argv[3]));
     DecisionStrategy ds;
     vector<MyPoint> map(360);
@@ -297,7 +297,7 @@ int main(int argc, const char * argv[]) {
                     unsigned short angle = (unsigned short)((nodes[pos].angle_q6_checkbit>>RPLIDAR_RESP_MEASUREMENT_ANGLE_SHIFT)/64.0f) % 360;
                     unsigned short distance = (nodes[pos].distance_q2 / 4.0f);
                     unsigned short quality = nodes[pos].sync_quality >> RPLIDAR_RESP_MEASUREMENT_QUALITY_SHIFT;
-                    if (distance > 1500)
+                    if (distance > uav_size)
                     {
                         map[angle].distance = distance; 
                         map[angle].quality = quality;
